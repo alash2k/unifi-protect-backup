@@ -187,13 +187,11 @@ class VideoDownloader:
                 assert isinstance(video, bytes)
                 break
             except (AssertionError, ClientPayloadError, TimeoutError) as e:
-                diff_seconds = (datetime.now() - request_start_time).total_seconds()
-                if  diff_seconds > 60:
-                    # fmt: off
-                    self.logger.error(f"Ignoring event. Total wait: {diff_seconds}. Camera: {await get_camera_name(self._protect, event.camera_id)}. Start: {event.start.strftime('%Y-%m-%dT%H-%M-%S')} ({event.start.timestamp()}) End: {event.end.strftime('%Y-%m-%dT%H-%M-%S')} ({event.end.timestamp()})", exc_info=e)
-                    # fmt: on
-                    await self._ignore_event(event)
-                    break
+                diff_seconds = (datetime.now() - request_start_time).total_seconds() # fmt: skip
+                if  diff_seconds > 60: # fmt: skip
+                    self.logger.error(f"Ignoring event. Total wait: {diff_seconds}. Camera: {await get_camera_name(self._protect, event.camera_id)}. Start: {event.start.strftime('%Y-%m-%dT%H-%M-%S')} ({event.start.timestamp()}) End: {event.end.strftime('%Y-%m-%dT%H-%M-%S')} ({event.end.timestamp()})", exc_info=e) # fmt: skip
+                    await self._ignore_event(event) # fmt: skip
+                    break # fmt: skip
                 self.logger.warning(f"    Failed download attempt {x+1}, retying in 1s", exc_info=e)
                 await asyncio.sleep(1)
         else:
