@@ -189,6 +189,7 @@ class VideoDownloader:
             except (AssertionError, ClientPayloadError, TimeoutError) as e:
                 diff_seconds = (datetime.now() - request_start_time).total_seconds()
                 if  diff_seconds > 60:
+                    # fmt: off
                     self.logger.error(f"Ignoring event. Total wait: {diff_seconds}. Camera: {await get_camera_name(self._protect, event.camera_id)}. Start: {event.start.strftime('%Y-%m-%dT%H-%M-%S')} ({event.start.timestamp()}) End: {event.end.strftime('%Y-%m-%dT%H-%M-%S')} ({event.end.timestamp()})", exc_info=e)
                     await self._ignore_event(event)
                     break
