@@ -58,7 +58,6 @@ jobs:
   dev_container:
     name: Create dev container 
     needs: test
-    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     permissions:
       contents: read
