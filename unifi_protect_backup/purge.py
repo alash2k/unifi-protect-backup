@@ -14,14 +14,14 @@ logger = logging.getLogger(__name__)
 
 async def delete_file(file_path, rclone_purge_args):
     """Deletes `file_path` via rclone."""
-    returncode, stdout, stderr = await run_command(f'rclone delete -vv "{file_path}" {rclone_purge_args}')
+    returncode = 0 #await run_command(f'rclone delete -vv "{file_path}" {rclone_purge_args}')
     if returncode != 0:
         logger.error(f" Failed to delete file: '{file_path}'")
 
 
 async def tidy_empty_dirs(base_dir_path):
     """Deletes any empty directories in `base_dir_path` via rclone."""
-    returncode, stdout, stderr = await run_command(f'rclone rmdirs -vv --ignore-errors --leave-root "{base_dir_path}"')
+    returncode = 0 #await run_command(f'rclone rmdirs -vv --ignore-errors --leave-root "{base_dir_path}"')
     if returncode != 0:
         logger.error(" Failed to tidy empty dirs")
 
