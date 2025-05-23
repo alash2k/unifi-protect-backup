@@ -7,7 +7,7 @@ from datetime import datetime
 import aiosqlite
 from dateutil.relativedelta import relativedelta
 
-from unifi_protect_backup.utils import run_command, wait_until
+from unifi_protect_backup.utils import wait_until
 
 logger = logging.getLogger(__name__)
 
