@@ -4,12 +4,13 @@ import asyncio
 import logging
 import re
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional, Set
 
 from apprise import NotifyType
 from async_lru import alru_cache
 from uiprotect import ProtectApiClient
 from uiprotect.data.nvr import Event
+from uiprotect.data.types import EventType, SmartDetectObjectType, SmartDetectAudioType
 
 from unifi_protect_backup import notifications
 
@@ -109,6 +110,9 @@ class AppriseStreamHandler(logging.StreamHandler):
 
         Args:
             color_logging (bool): If true logging levels will be colorized
+            *args (): Positional arguments to pass to StreamHandler
+            **kwargs: Keyword arguments to pass to StreamHandler
+
         """
         super().__init__(*args, **kwargs)
         self.color_logging = color_logging
@@ -172,7 +176,7 @@ class AppriseStreamHandler(logging.StreamHandler):
 
 
 def create_logging_handler(format, color_logging):
-    """Constructs apprise logging handler for the given format."""
+    """Construct apprise logging handler for the given format."""
     date_format = "%Y-%m-%d %H:%M:%S"
     style = "{"
 
@@ -182,8 +186,8 @@ def create_logging_handler(format, color_logging):
     return sh
 
 
-def setup_logging(verbosity: int, color_logging: bool = False, apprise_notifiers: List[str] = []) -> None:
-    """Configures loggers to provided the desired level of verbosity.
+def setup_logging(verbosity: int, color_logging: bool = False) -> None:
+    """Configure loggers to provided the desired level of verbosity.
 
     Verbosity 0: Only log info messages created by `unifi-protect-backup`, and all warnings
     verbosity 1: Only log info & debug messages created by `unifi-protect-backup`, and all warnings
@@ -199,7 +203,6 @@ def setup_logging(verbosity: int, color_logging: bool = False, apprise_notifiers
     Args:
         verbosity (int): The desired level of verbosity
         color_logging (bool): If colors should be used in the log (default=False)
-        apprise_notifiers (List[str]): Notification services to hook into the logger
 
     """
     add_logging_level(
@@ -242,7 +245,7 @@ _initialized_loggers = []
 
 
 def setup_event_logger(logger, color_logging):
-    """Sets up a logger that also displays the event ID currently being processed."""
+    """Set up a logger that also displays the event ID currently being processed."""
     global _initialized_loggers
     if logger not in _initialized_loggers:
         format = "{asctime} [{levelname:^11s}] {name:<42} :{event}  {message}"
@@ -256,12 +259,13 @@ _suffixes = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
 
 
 def human_readable_size(num: float):
-    """Turns a number into a human readable number with ISO/IEC 80000 binary prefixes.
+    """Turn a number into a human readable number with ISO/IEC 80000 binary prefixes.
 
     Based on: https://stackoverflow.com/a/1094933
 
     Args:
         num (int): The number to be converted into human readable format
+
     """
     for unit in _suffixes:
         if abs(num) < 1024.0:
@@ -271,7 +275,7 @@ def human_readable_size(num: float):
 
 
 def human_readable_to_float(num: str):
-    """Turns a human readable ISO/IEC 80000 suffix value to its full float value."""
+    """Turn a human readable ISO/IEC 80000 suffix value to its full float value."""
     pattern = r"([\d.]+)(" + "|".join(_suffixes) + ")"
     result = re.match(pattern, num)
     if result is None:
@@ -287,7 +291,7 @@ def human_readable_to_float(num: str):
 # No max size, and a 6 hour ttl
 @alru_cache(None, ttl=60 * 60 * 6)
 async def get_camera_name(protect: ProtectApiClient, id: str):
-    """Returns the name for the camera with the given ID.
+    """Return the name for the camera with the given ID.
 
     If the camera ID is not know, it tries refreshing the cached data
     """
@@ -322,6 +326,7 @@ class SubprocessException(Exception):
           stdout (str): What rclone output to stdout
           stderr (str): What rclone output to stderr
           returncode (str): The return code of the rclone process
+
         """
         super().__init__()
         self.stdout: str = stdout
@@ -329,12 +334,12 @@ class SubprocessException(Exception):
         self.returncode: int = returncode
 
     def __str__(self):
-        """Turns exception into a human readable form."""
+        """Turn exception into a human readable form."""
         return f"Return Code: {self.returncode}\nStdout:\n{self.stdout}\nStderr:\n{self.stderr}"
 
 
 async def run_command(cmd: str, data=None):
-    """Runs the given command returning the exit code, stdout and stderr."""
+    """Run the given command returning the exit code, stdout and stderr."""
     proc = await asyncio.create_subprocess_shell(
         cmd,
         stdin=asyncio.subprocess.PIPE,
@@ -367,11 +372,11 @@ class VideoQueue(asyncio.Queue):
         self._bytes_sum = 0
 
     def qsize(self):
-        """Number of items in the queue."""
+        """Get number of items in the queue."""
         return self._bytes_sum
 
     def qsize_files(self):
-        """Number of items in the queue."""
+        """Get number of items in the queue."""
         return super().qsize()
 
     def _get(self):
@@ -450,3 +455,38 @@ async def wait_until(dt):
     """Sleep until the specified datetime."""
     now = datetime.now()
     await asyncio.sleep((dt - now).total_seconds())
+
+
+EVENT_TYPES_MAP = {
+    EventType.MOTION: {"motion"},
+    EventType.RING: {"ring"},
+    EventType.SMART_DETECT_LINE: {"line"},
+    EventType.FINGERPRINT_IDENTIFIED: {"fingerprint"},
+    EventType.NFC_CARD_SCANNED: {"nfc"},
+    EventType.SMART_DETECT: {t for t in SmartDetectObjectType.values() if t not in SmartDetectAudioType.values()},
+    EventType.SMART_AUDIO_DETECT: {f"{t}" for t in SmartDetectAudioType.values()},
+}
+
+
+def wanted_event_type(event, wanted_detection_types: Set[str], cameras: Set[str], ignore_cameras: Set[str]):
+    """Return True if this event is one we want."""
+    if event.start is None or event.end is None:
+        return False  # This event is still on-going
+
+    if event.camera_id in ignore_cameras:
+        return False
+
+    if cameras and event.camera_id not in cameras:
+        return False
+
+    if event.type not in EVENT_TYPES_MAP:
+        return False
+
+    if event.type in [EventType.SMART_DETECT, EventType.SMART_AUDIO_DETECT]:
+        detection_types = set(event.smart_detect_types)
+    else:
+        detection_types = EVENT_TYPES_MAP[event.type]
+    if not detection_types & wanted_detection_types:  # No intersection
+        return False
+
+    return True

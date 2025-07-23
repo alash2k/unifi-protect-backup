@@ -7,13 +7,15 @@ import click
 from aiorun import run  # type: ignore
 from dateutil.relativedelta import relativedelta
 
-from uiprotect.data.types import SmartDetectObjectType
+from uiprotect.data.types import SmartDetectObjectType, SmartDetectAudioType
 
 from unifi_protect_backup import __version__
 from unifi_protect_backup.unifi_protect_backup_core import UnifiProtectBackup
 from unifi_protect_backup.utils import human_readable_to_float
 
-DETECTION_TYPES = ["motion", "ring", "line"] + SmartDetectObjectType.values()
+DETECTION_TYPES = ["motion", "ring", "line", "fingerprint", "nfc"]
+DETECTION_TYPES += [t for t in SmartDetectObjectType.values() if t not in SmartDetectAudioType.values()]
+DETECTION_TYPES += [f"{t}" for t in SmartDetectAudioType.values()]
 
 
 def _parse_detection_types(ctx, param, value):
@@ -29,7 +31,7 @@ def _parse_detection_types(ctx, param, value):
 
 
 def parse_rclone_retention(ctx, param, retention) -> relativedelta:
-    """Parses the rclone `retention` parameter into a relativedelta which can then be used to calculate datetimes."""
+    """Parse the rclone `retention` parameter into a relativedelta which can then be used to calculate datetimes."""
     matches = {k: int(v) for v, k in re.findall(r"([\d]+)(ms|s|m|h|d|w|M|y)", retention)}
 
     # Check that we matched the whole string
@@ -169,7 +171,7 @@ all warnings, and websocket data
     show_default=True,
     envvar="DOWNLOAD_BUFFER_SIZE",
     help='How big the download buffer should be (you can use suffixes like "B", "KiB", "MiB", "GiB")',
-    callback=lambda ctx, param, value: human_readable_to_float(value),
+    callback=lambda ctx, param, value: int(human_readable_to_float(value)),
 )
 @click.option(
     "--purge_interval",
@@ -248,8 +250,7 @@ a lot of failed downloads with the default downloader.
     help="Max number of parallel uploads to allow",
 )
 def main(**kwargs):
-    """A Python based tool for backing up Unifi Protect event clips as they occur."""
-
+    """Python based tool for backing up Unifi Protect event clips as they occur."""
     try:
         # Validate only one of the camera select arguments was given
         if kwargs.get("cameras") and kwargs.get("ignore_cameras"):

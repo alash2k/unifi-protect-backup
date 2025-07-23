@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "unifi_protect_backup"
-version = "0.13.0"
+version = "0.14.0"
 description = "Python tool to backup unifi event clips in realtime."
 readme = "README.md"
 license = {text = "MIT"}
@@ -29,7 +29,7 @@ dependencies = [
     "expiring-dict>=1.1.0",
     "async-lru>=2.0.4",
     "aiolimiter>=1.1.0",
-    "uiprotect==7.5.2",
+    "uiprotect==7.14.1",
     "aiohttp==3.11.16",
 ]
 
@@ -63,8 +63,14 @@ line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
+select = ["E","F","D","B","W"]
+ignore = ["D203", "D213"]
 
 [tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
 
 [tool.mypy]
 allow_redefinition = true
