@@ -12,9 +12,12 @@ jobs:
     # The type of runner that the job will run on
     strategy:
       matrix:
-        python-versions: ["3.10", "3.11", "3.12", "3.13"]
+        python-versions: ["3.11", "3.12", "3.13"]
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      UV_PYTHON: ${{ matrix.python-versions }}
+      UV_PYTHON_PREFERENCE: only-system
     
     steps:
       - name: Configure Git to maintain line endings
@@ -57,12 +60,15 @@ jobs:
         run: uv build
 
   dev_container:
-    name: Create dev container 
+    name: Create dev container
     needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    env:
+      UV_PYTHON: '3.12'
+      UV_PYTHON_PREFERENCE: only-system
     
     steps:
       - name: Checkout code
