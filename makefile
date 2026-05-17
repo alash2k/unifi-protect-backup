@@ -6,17 +6,17 @@ container_arches ?= linux/amd64,linux/arm64
 test: format lint unittest
 
 format:
-	ruff format $(sources) tests
+	uv run ruff format $(sources) tests
 
 lint:
-	ruff check $(sources) tests
-	mypy $(sources) tests
+	uv run ruff check $(sources) tests
+	uv run mypy $(sources) tests
 
 unittest:
-	pytest
+	uv run pytest
 
 coverage:
-	pytest --cov=$(sources) --cov-branch --cov-report=term-missing tests
+	uv run pytest --cov=$(sources) --cov-branch --cov-report=term-missing tests
 
 pre-commit:
 	pre-commit run --all-files

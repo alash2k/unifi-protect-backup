@@ -74,6 +74,7 @@ docstring-code-format = true
 
 [tool.mypy]
 allow_redefinition = true
+ignore_missing_imports = true
 exclude = [
     'unifi_protect_backup/uiprotect_patch.py'
 ]
